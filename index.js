@@ -110,3 +110,7 @@ $("#shuffle").on("click", e => {
     
     $("#original").val(arr.join(""));
 });
+
+window.onload = function() {
+    $("#original").focus();
+};
