@@ -78,21 +78,31 @@ $("#anagram").on("keypress", e => {
     anagram[0].selectionStart = anagram[0].selectionEnd = se+1;
 });
 
-$("#original").on("keypress", e => {
-    e.preventDefault();
-    let anagram = $("#anagram");
-    let original = $("#original");
-    let code = e.keyCode;
-    
-    code = String.fromCharCode(code).toUpperCase().charCodeAt(0);
-    let pressed = String.fromCharCode(code).toUpperCase();
-    
-    let oldval = original.val();
-    let newval = oldval.substring(0, original[0].selectionStart) + pressed + oldval.substring(original[0].selectionEnd);
-    let newStartSelection = original[0].selectionEnd+pressed.length;
-    original.val(newval);
-    original[0].selectionStart = newStartSelection;
-    original[0].selectionEnd = newStartSelection;
+function replaceSelected(element, replacementText) {
+    let oldval = element.val();
+    let newval = oldval.substring(0, element[0].selectionStart) + replacementText + oldval.substring(element[0].selectionEnd);
+    let newStartSelection = element[0].selectionEnd + replacementText.length;
+    element.val(newval);
+    element[0].selectionStart = newStartSelection;
+    element[0].selectionEnd = newStartSelection;
+}
+
+$("#original").on("keypress", event => {
+    event.preventDefault();
+    let pressed = String.fromCharCode(event.keyCode).toUpperCase();
+    replaceSelected($("#original"), pressed);
+});
+
+$("#original").on("paste", event => {
+    event.preventDefault();
+    const clipboardData = event.clipboardData || window.clipboardData || event.originalEvent.clipboardData;
+    const pastedContent = clipboardData.getData("text").toUpperCase();
+    replaceSelected($("#original"), pastedContent);
+});
+
+$("#anagram").on("paste", event => {
+    event.preventDefault();
+    alert("Pasting in the anagram input field not yet supported");
 });
 
 $("#shuffle").on("click", e => {
