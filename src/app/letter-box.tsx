@@ -8,14 +8,20 @@ type LetterBoxProps = {
   stateUpdater: Dispatch<SetStateAction<State>>;
 };
 
+function isLetter(s: string): boolean {
+  return s.length === 1 && s.toUpperCase() != s.toLowerCase();
+}
+
 class LetterCounter {
   map: { [key: string]: number } = {};
 
-  static fromArr(letters: Array<string>): LetterCounter {
+  static fromArr(symbols: Array<string>): LetterCounter {
     const counter = new LetterCounter();
 
-    for (const letter of letters) {
-      counter.add(letter);
+    for (const symbol of symbols) {
+      if (isLetter(symbol)) {
+        counter.add(symbol);
+      }
     }
 
     return counter;
@@ -56,6 +62,15 @@ class LetterCounter {
     }
 
     return diff;
+  }
+
+  containsAll(other: LetterCounter): boolean {
+    for (const letter in other.map) {
+      if (this.get(letter) < other.get(letter)) {
+        return false;
+      }
+    }
+    return true;
   }
 }
 
@@ -103,14 +118,14 @@ function removeCountedLettersFromArr(
 
 export default function LetterBox(props: LetterBoxProps) {
   return (
-    <input
+    <textarea
       name={props.name}
       value={props.state[props.name].join("")}
       onChange={(e) => {
-        const newLetterArr = e.target.value.split("");
+        const newLetterArr = e.target.value.toUpperCase().split("");
         e.preventDefault();
         switch (props.name) {
-          case "original":
+          case "original": {
             const oldOriginalCounter = LetterCounter.fromArr(
               props.state.original
             );
@@ -134,11 +149,35 @@ export default function LetterBox(props: LetterBoxProps) {
               removedLetters
             );
             break;
+          }
           case "material":
             // cannot just add new material
             break;
-          case "anagram":
+          case "anagram": {
+            const oldAnagramCounter = LetterCounter.fromArr(
+              props.state.anagram
+            );
+            const newAnagramCounter = LetterCounter.fromArr(newLetterArr);
+
+            const oldMaterialCounter = LetterCounter.fromArr(
+              props.state.material
+            );
+
+            // at most one of these counters is non-empty
+            const addedLetters = newAnagramCounter.diff(oldAnagramCounter);
+            const removedLetters = oldAnagramCounter.diff(newAnagramCounter);
+
+            if (oldMaterialCounter.containsAll(addedLetters)) {
+              [props.state.material] = removeCountedLettersFromArr(
+                props.state.material,
+                addedLetters
+              );
+              props.state.anagram = newLetterArr;
+              props.state.material.push(...removedLetters.toArr());
+            }
+
             break;
+          }
           default: // do nothing
             break;
         }
@@ -149,6 +188,6 @@ export default function LetterBox(props: LetterBoxProps) {
           anagram: props.state.anagram,
         });
       }}
-    ></input>
+    ></textarea>
   );
 }
