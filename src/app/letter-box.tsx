@@ -6,6 +6,7 @@ type LetterBoxProps = {
   name: string;
   state: State;
   stateUpdater: Dispatch<SetStateAction<State>>;
+  shufflable?: boolean;
 };
 
 function isLetter(s: string): boolean {
@@ -106,72 +107,92 @@ function removeCountedLettersFromArr(
 
 export default function LetterBox(props: LetterBoxProps) {
   return (
-    <textarea
-      name={props.name}
-      value={(props.state as unknown as { [key: string]: string[] })[
-        props.name
-      ].join("")}
-      onChange={(e) => {
-        const newLetterArr = e.target.value.toUpperCase().split("");
-        e.preventDefault();
+    <div
+      style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+    >
+      <div>
+        <span style={{ fontSize: "90%" }}>{props.name}</span>
+        {props.shufflable && " " && (
+          <button
+            style={{ border: "1pt", borderStyle: "solid", borderRadius: "10%", marginLeft: "5px", backgroundColor: "lightgrey", color: "black" }}
+            onClick={() => {
+              const letters = props.state.get(props.name);
+              for (let i = 0; i < letters.length; ++i) {
+                const j = Math.floor(Math.random() * letters.length);
+                const tmp = letters[i];
+                letters[i] = letters[j];
+                letters[j] = tmp;
+              }
 
-        switch (props.name) {
-          case "original": {
-            const oldOriginalCounter = LetterCounter.fromArr(
-              props.state.original
-            );
-            const newOriginalCounter = LetterCounter.fromArr(newLetterArr);
+              props.stateUpdater(props.state.clone());
+            }}
+          >
+            shuffle
+          </button>
+        )}
+      </div>
+      <textarea
+        name={props.name}
+        value={props.state.get(props.name).join("")}
+        onChange={(e) => {
+          const newLetterArr = e.target.value.toUpperCase().split("");
+          e.preventDefault();
 
-            // original: just apply the value from the event
-            props.state.original = newLetterArr;
+          switch (props.name) {
+            case "original": {
+              const oldOriginalCounter = LetterCounter.fromArr(
+                props.state.original
+              );
+              const newOriginalCounter = LetterCounter.fromArr(newLetterArr);
 
-            // material: add what is added to original
-            const addedLetters = newOriginalCounter.diff(oldOriginalCounter);
-            props.state.material.push(...addedLetters.toArr());
+              // original: just apply the value from the event
+              props.state.original = newLetterArr;
 
-            const removedLetters = oldOriginalCounter.diff(newOriginalCounter);
-            // material: remove what is removed from original, and update the removables
-            removeCountedLettersFromArr(props.state.material, removedLetters);
+              // material: add what is added to original
+              const addedLetters = newOriginalCounter.diff(oldOriginalCounter);
+              props.state.material.push(...addedLetters.toArr());
 
-            // anagram: if anything remains after removal from material, remove here
-            removeCountedLettersFromArr(props.state.anagram, removedLetters);
-            break;
-          }
-          case "material":
-            // cannot just add new material
-            break;
-          case "anagram": {
-            const oldAnagramCounter = LetterCounter.fromArr(
-              props.state.anagram
-            );
-            const newAnagramCounter = LetterCounter.fromArr(newLetterArr);
+              const removedLetters =
+                oldOriginalCounter.diff(newOriginalCounter);
+              // material: remove what is removed from original, and update the removables
+              removeCountedLettersFromArr(props.state.material, removedLetters);
 
-            const oldMaterialCounter = LetterCounter.fromArr(
-              props.state.material
-            );
-
-            // at most one of these counters is non-empty
-            const addedLetters = newAnagramCounter.diff(oldAnagramCounter);
-            const removedLetters = oldAnagramCounter.diff(newAnagramCounter);
-
-            if (oldMaterialCounter.containsAll(addedLetters)) {
-              removeCountedLettersFromArr(props.state.material, addedLetters);
-              props.state.anagram = newLetterArr;
-              props.state.material.push(...removedLetters.toArr());
+              // anagram: if anything remains after removal from material, remove here
+              removeCountedLettersFromArr(props.state.anagram, removedLetters);
+              break;
             }
+            case "material":
+              // cannot just add new material
+              break;
+            case "anagram": {
+              const oldAnagramCounter = LetterCounter.fromArr(
+                props.state.anagram
+              );
+              const newAnagramCounter = LetterCounter.fromArr(newLetterArr);
 
-            break;
+              const oldMaterialCounter = LetterCounter.fromArr(
+                props.state.material
+              );
+
+              // at most one of these counters is non-empty
+              const addedLetters = newAnagramCounter.diff(oldAnagramCounter);
+              const removedLetters = oldAnagramCounter.diff(newAnagramCounter);
+
+              if (oldMaterialCounter.containsAll(addedLetters)) {
+                removeCountedLettersFromArr(props.state.material, addedLetters);
+                props.state.anagram = newLetterArr;
+                props.state.material.push(...removedLetters.toArr());
+              }
+
+              break;
+            }
+            default: // do nothing
+              break;
           }
-          default: // do nothing
-            break;
-        }
 
-        props.stateUpdater({
-          original: props.state.original,
-          material: props.state.material,
-          anagram: props.state.anagram,
-        });
-      }}
-    ></textarea>
+          props.stateUpdater(props.state.clone());
+        }}
+      ></textarea>
+    </div>
   );
 }
