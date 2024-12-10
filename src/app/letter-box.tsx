@@ -77,53 +77,44 @@ class LetterCounter {
 type HashSet = { [key: string]: boolean };
 
 /**
- * Returns a new array containing letters from `arr`, without the letters from `counter`.
- * Also updates `counter` by removing from it.
+ * Modifies the provided `arr` by removing the letters contained in `counter`.
  */
 function removeCountedLettersFromArr(
   arr: Array<string>,
   counter: LetterCounter
-): [Array<string>, LetterCounter] {
-  const removedCount = new LetterCounter();
+) {
   const removableIndices: HashSet = {};
-  for (const removedLetter in counter.map) {
-    const removedLetterCount = counter.get(removedLetter);
+  for (const removableLetter in counter.map) {
+    const removableLetterCount = counter.get(removableLetter);
     let timesRemoved = 0;
     let lastIndex = -1;
-    while (true) {
-      lastIndex = arr.indexOf(removedLetter, lastIndex + 1);
+    while (timesRemoved < removableLetterCount) {
+      lastIndex = arr.indexOf(removableLetter, lastIndex + 1);
       if (lastIndex === -1) {
         break;
       }
 
       timesRemoved++;
       removableIndices[lastIndex] = true;
-      removedCount.add(removedLetter);
-
-      if (timesRemoved === removedLetterCount) {
-        break;
-      }
+      counter.map[removableLetter]--;
     }
   }
 
-  const filteredArr = [];
-  for (let i = 0; i < arr.length; i++) {
-    if (!removableIndices[i]) {
-      filteredArr.push(arr[i]);
-    }
-  }
-
-  return [filteredArr, removedCount];
+  // replace all elements in the array with that of a filtered array
+  arr.splice(0, arr.length, ...arr.filter((_, i) => !removableIndices[i]));
 }
 
 export default function LetterBox(props: LetterBoxProps) {
   return (
     <textarea
       name={props.name}
-      value={props.state[props.name].join("")}
+      value={(props.state as unknown as { [key: string]: string[] })[
+        props.name
+      ].join("")}
       onChange={(e) => {
         const newLetterArr = e.target.value.toUpperCase().split("");
         e.preventDefault();
+
         switch (props.name) {
           case "original": {
             const oldOriginalCounter = LetterCounter.fromArr(
@@ -138,16 +129,12 @@ export default function LetterBox(props: LetterBoxProps) {
             const addedLetters = newOriginalCounter.diff(oldOriginalCounter);
             props.state.material.push(...addedLetters.toArr());
 
-            let removedLetters = oldOriginalCounter.diff(newOriginalCounter);
+            const removedLetters = oldOriginalCounter.diff(newOriginalCounter);
             // material: remove what is removed from original, and update the removables
-            [props.state.material, removedLetters] =
-              removeCountedLettersFromArr(props.state.material, removedLetters);
+            removeCountedLettersFromArr(props.state.material, removedLetters);
 
             // anagram: if anything remains after removal from material, remove here
-            [props.state.anagram] = removeCountedLettersFromArr(
-              props.state.anagram,
-              removedLetters
-            );
+            removeCountedLettersFromArr(props.state.anagram, removedLetters);
             break;
           }
           case "material":
@@ -168,10 +155,7 @@ export default function LetterBox(props: LetterBoxProps) {
             const removedLetters = oldAnagramCounter.diff(newAnagramCounter);
 
             if (oldMaterialCounter.containsAll(addedLetters)) {
-              [props.state.material] = removeCountedLettersFromArr(
-                props.state.material,
-                addedLetters
-              );
+              removeCountedLettersFromArr(props.state.material, addedLetters);
               props.state.anagram = newLetterArr;
               props.state.material.push(...removedLetters.toArr());
             }
