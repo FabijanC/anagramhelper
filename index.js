@@ -16,7 +16,7 @@ function keepChars(str) {
 
 $("#anagram").on("keydown", e => {
     let anagram = $("#anagram");
-    let original = $("#original");
+    let material = $("#material");
     let code = e.keyCode;
     
     let ss = anagram[0].selectionStart, se = anagram[0].selectionEnd;
@@ -50,25 +50,25 @@ $("#anagram").on("keydown", e => {
         deleted = oldval.substring(ss, se);
     }
     
-    original.val(original.val() + keepChars(deleted));
+    material.val(material.val() + keepChars(deleted));
 });
 
 $("#anagram").on("keypress", e => {
     e.preventDefault();
     let anagram = $("#anagram");
-    let original = $("#original");
+    let material = $("#material");
     let code = e.keyCode;
 
     code = String.fromCharCode(code).toUpperCase().charCodeAt(0);
     let pressed = String.fromCharCode(code);
     
-    let material = original.val();
-    
+    const oldMaterial = material.val();
+
     if (isLetter(code) && pressed === pressed.toUpperCase()) {                    
-        if (material.indexOf(pressed) == -1) {
+        if (oldMaterial.indexOf(pressed) == -1) {
             return;
         }
-        original.val(material.replace(pressed, ""));
+        material.val(oldMaterial.replace(pressed, ""));
     }
     
     let oldval = anagram.val();
@@ -87,17 +87,17 @@ function replaceSelected(element, replacementText) {
     element[0].selectionEnd = newStartSelection;
 }
 
-$("#original").on("keypress", event => {
+$("#material").on("keypress", event => {
     event.preventDefault();
     let pressed = String.fromCharCode(event.keyCode).toUpperCase();
-    replaceSelected($("#original"), pressed);
+    replaceSelected($("#material"), pressed);
 });
 
-$("#original").on("paste", event => {
+$("#material").on("paste", event => {
     event.preventDefault();
     const clipboardData = event.clipboardData || window.clipboardData || event.originalEvent.clipboardData;
     const pastedContent = clipboardData.getData("text").toUpperCase();
-    replaceSelected($("#original"), pastedContent);
+    replaceSelected($("#material"), pastedContent);
 });
 
 $("#anagram").on("paste", event => {
@@ -106,7 +106,7 @@ $("#anagram").on("paste", event => {
 });
 
 $("#shuffle").on("click", e => {
-    var arr = $("#original").val().split("");
+    var arr = $("#material").val().split("");
     var curr = arr.length, tmp, randIndex;
     
     while (0 !== curr) {
@@ -118,9 +118,9 @@ $("#shuffle").on("click", e => {
         arr[rand] = tmp;
     }
     
-    $("#original").val(arr.join(""));
+    $("#material").val(arr.join(""));
 });
 
 window.onload = function() {
-    $("#original").focus();
+    $("#material").focus();
 };
