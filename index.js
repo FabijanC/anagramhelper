@@ -1,126 +1,220 @@
-function isLetter(code) {
-    let chr = String.fromCharCode(code);
-    return chr.toUpperCase() != chr.toLowerCase();
-    //return code >= 65 && code <= 90 || code >= 97 || code <= 122;
+function countLetters(s) {
+  const counter = {};
+  for (const c of s) {
+    if (!(c in counter)) {
+      counter[c] = 0;
+    }
+
+    counter[c]++;
+  }
+
+  return counter;
 }
 
-function keepChars(str) {
-    var ret = "";
-    for (var i = 0; i < str.length; ++i) {
-        if (isLetter(str.charCodeAt(i))) {
-            ret += str.charAt(i);
-        }
+function subtractCounter(counter1, counter2) {
+  const newCounter = {};
+  for (const e1 in counter1) {
+    const newCount = counter1[e1] - (counter2[e1] || 0);
+    if (newCount < 0) {
+      const s1 = JSON.stringify(counter1);
+      const s2 = JSON.stringify(counter2);
+      throw new Error(
+        `Invalid new count for ${e1}: ${newCount}. Subtracting: ${s1} - ${s2}`
+      );
     }
-    return ret;
+
+    newCounter[e1] = newCount;
+  }
+
+  return newCounter;
 }
 
-$("#anagram").on("keydown", e => {
-    let anagram = $("#anagram");
-    let material = $("#material");
-    let code = e.keyCode;
-    
-    let ss = anagram[0].selectionStart, se = anagram[0].selectionEnd;
-    
-    if (code != 8 && code != 46) {
-        return;
+function isLetter(c) {
+  return c.length === 1 && c.toUpperCase() != c.toLowerCase();
+}
+
+function isPrintable(c) {
+  return c.length === 1;
+}
+
+document.querySelector("#original").addEventListener("input", function (event) {
+  const input = event.target;
+  input.value = input.value.toUpperCase();
+});
+
+/**
+ * `inputs` should be an array of html textarea/input elements from which the removal of character `c`
+ * should be attempted. First tries from the first member of `inputs` etc, then second, etc.
+ * Stops trying on successful removal.
+ */
+function removeFrom(c, inputs) {
+  if (c.length === 0) {
+    return;
+  }
+
+  for (const input of inputs) {
+    const removableIndex = input.value.indexOf(c);
+    if (removableIndex !== -1) {
+      const newVal =
+        input.value.slice(0, removableIndex) +
+        input.value.slice(removableIndex + 1);
+      input.value = newVal;
+      break;
     }
-    
-    e.preventDefault();
-    
-    let oldval = anagram.val(), deleted;
-    
-    if (ss === se) {
-        if (code === 8) {
-            if (ss === 0) {
-                return;
-            }
-            deleted = oldval[ss-1];
-            anagram.val(oldval.substring(0, ss-1) + oldval.substring(ss));
-            anagram[0].selectionStart = anagram[0].selectionEnd = ss-1;
-        } else { // code == 46
-            if (se == anagram.val().length) {
-                return;
-            }
-            deleted = oldval[ss];
-            anagram.val(oldval.substring(0, ss) + oldval.substring(ss+1));
-            anagram[0].selectionStart = anagram[0].selectionEnd = ss;
-        }
+  }
+}
+
+document.querySelector("#original").addEventListener("cut", function (event) {
+  const input = event.target;
+
+  const selectionStart = input.selectionStart;
+  const selectionEnd = input.selectionEnd;
+
+  const material = document.querySelector("#material");
+  const anagram = document.querySelector("#anagram");
+  const targetInputs = [material, anagram];
+
+  for (let i = selectionStart; i < selectionEnd; i++) {
+    removeFrom(input.value.charAt(i), targetInputs);
+  }
+});
+
+document.querySelector("#original").addEventListener("paste", function (event) {
+  const input = event.target;
+
+  const selectionStart = input.selectionStart;
+  const selectionEnd = input.selectionEnd;
+
+  const material = document.querySelector("#material");
+  const anagram = document.querySelector("#anagram");
+  const targetInputs = [material, anagram];
+
+  for (let i = selectionStart; i < selectionEnd; i++) {
+    removeFrom(input.value.charAt(i), targetInputs);
+  }
+
+  material.value += event.clipboardData.getData("text");
+});
+
+document
+  .querySelector("#original")
+  .addEventListener("keydown", function (event) {
+    const input = event.target;
+
+    const selectionStart = input.selectionStart;
+    const selectionEnd = input.selectionEnd;
+
+    const material = document.querySelector("#material");
+    const anagram = document.querySelector("#anagram");
+    const targetInputs = [material, anagram];
+
+    if (selectionStart === selectionEnd) {
+      switch (event.key) {
+        case "Backspace":
+          removeFrom(input.value.charAt(selectionStart - 1), targetInputs);
+          break;
+        case "Delete":
+          removeFrom(input.value.charAt(selectionStart), targetInputs);
+          break;
+        default:
+          break;
+      }
+    }
+
+    if (
+      event.key === "Backspace" ||
+      event.key === "Delete" ||
+      (isPrintable(event.key) && !event.ctrlKey)
+    ) {
+      for (let i = selectionStart; i < selectionEnd; i++) {
+        removeFrom(input.value.charAt(i), targetInputs);
+      }
     } else {
-        anagram.val(oldval.substring(0, ss) + oldval.substring(se));
-        deleted = oldval.substring(ss, se);
+      return;
     }
-    
-    material.val(material.val() + keepChars(deleted));
-});
 
-$("#anagram").on("keypress", e => {
-    e.preventDefault();
-    let anagram = $("#anagram");
-    let material = $("#material");
-    let code = e.keyCode;
-
-    code = String.fromCharCode(code).toUpperCase().charCodeAt(0);
-    let pressed = String.fromCharCode(code);
-    
-    const oldMaterial = material.val();
-
-    if (isLetter(code) && pressed === pressed.toUpperCase()) {                    
-        if (oldMaterial.indexOf(pressed) == -1) {
-            return;
-        }
-        material.val(oldMaterial.replace(pressed, ""));
+    if (isLetter(event.key) && !event.ctrlKey) {
+      material.value += event.key.toUpperCase();
     }
-    
-    let oldval = anagram.val();
-    let newval = oldval.substring(0, anagram[0].selectionStart) + pressed + oldval.substring(anagram[0].selectionEnd);
-    let se = anagram[0].selectionEnd;
-    anagram.val(newval);
-    anagram[0].selectionStart = anagram[0].selectionEnd = se+1;
-});
+  });
 
-function replaceSelected(element, replacementText) {
-    let oldval = element.val();
-    let newval = oldval.substring(0, element[0].selectionStart) + replacementText + oldval.substring(element[0].selectionEnd);
-    let newStartSelection = element[0].selectionEnd + replacementText.length;
-    element.val(newval);
-    element[0].selectionStart = newStartSelection;
-    element[0].selectionEnd = newStartSelection;
-}
-
-$("#material").on("keypress", event => {
+document
+  .querySelector("#anagram")
+  .addEventListener("keydown", function (event) {
     event.preventDefault();
-    let pressed = String.fromCharCode(event.keyCode).toUpperCase();
-    replaceSelected($("#material"), pressed);
-});
 
-$("#material").on("paste", event => {
-    event.preventDefault();
-    const clipboardData = event.clipboardData || window.clipboardData || event.originalEvent.clipboardData;
-    const pastedContent = clipboardData.getData("text").toUpperCase();
-    replaceSelected($("#material"), pastedContent);
-});
+    const input = event.target;
+    const originalValue = input.value;
+    const caretPosition = input.selectionStart;
+    const selectionStart = input.selectionStart;
+    const selectionEnd = input.selectionEnd;
 
-$("#anagram").on("paste", event => {
-    event.preventDefault();
-    alert("Pasting in the anagram input field not yet supported");
-});
+    let newValue = originalValue; // This will store the "after event" value
 
-$("#shuffle").on("click", e => {
-    var arr = $("#material").val().split("");
-    var curr = arr.length, tmp, randIndex;
-    
-    while (0 !== curr) {
-        rand = Math.floor(Math.random()*curr);
-        --curr;
-        
-        tmp = arr[curr];
-        arr[curr] = arr[rand];
-        arr[rand] = tmp;
+    if (selectionStart !== selectionEnd) {
+      // There's a selection (text is highlighted)
+      const selectedText = originalValue.slice(selectionStart, selectionEnd);
+
+      switch (event.key) {
+        case "Backspace":
+          // If backspace is pressed, we remove the selected text
+          newValue =
+            originalValue.slice(0, selectionStart) +
+            originalValue.slice(selectionEnd);
+          break;
+        case "Delete":
+          // If delete is pressed, we also remove the selected text
+          newValue =
+            originalValue.slice(0, selectionStart) +
+            originalValue.slice(selectionEnd);
+          break;
+        default:
+          if (event.key.length === 1) {
+            // If a character is typed, we replace the selected text with the new character
+            newValue =
+              originalValue.slice(0, selectionStart) +
+              event.key +
+              originalValue.slice(selectionEnd);
+          }
+          break;
+      }
+    } else {
+      // No selection, just modify the caret position
+      switch (event.key) {
+        case "Backspace":
+          if (caretPosition > 0) {
+            // Remove the character before the caret
+            newValue =
+              originalValue.slice(0, caretPosition - 1) +
+              originalValue.slice(caretPosition);
+          }
+          break;
+        case "Delete":
+          if (caretPosition < originalValue.length) {
+            // Remove the character at the caret position
+            newValue =
+              originalValue.slice(0, caretPosition) +
+              originalValue.slice(caretPosition + 1);
+          }
+          break;
+        case "Enter":
+          // Simulate Enter (newline) at caret position
+          newValue =
+            originalValue.slice(0, caretPosition) +
+            "\n" +
+            originalValue.slice(caretPosition);
+          break;
+        default:
+          if (event.key.length === 1) {
+            // Insert character at caret position
+            newValue =
+              originalValue.slice(0, caretPosition) +
+              event.key +
+              originalValue.slice(caretPosition);
+          }
+          break;
+      }
     }
-    
-    $("#material").val(arr.join(""));
-});
 
-window.onload = function() {
-    $("#material").focus();
-};
+    console.log("New content after key event:", newValue);
+  });
