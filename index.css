@@ -33,11 +33,16 @@ textarea {
     width: 100%;
     resize: vertical;
     min-height: 100%;
-    font-size: 27pt;
+    font-size: 25pt;
     border-style: solid;
     border-width: 2px;
     border-radius: 5px;
     padding: 10px;
+}
+
+textarea::placeholder {
+    color: rgb(190, 190, 190);
+    font-size: 20pt;
 }
 
 .input-label {
