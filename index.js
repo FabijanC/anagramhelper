@@ -1,126 +1,384 @@
-function isLetter(code) {
-    let chr = String.fromCharCode(code);
-    return chr.toUpperCase() != chr.toLowerCase();
-    //return code >= 65 && code <= 90 || code >= 97 || code <= 122;
+function countLetters(s) {
+  const counter = {};
+  for (const c of s) {
+    if (!(c in counter)) {
+      counter[c] = 0;
+    }
+
+    counter[c]++;
+  }
+
+  return counter;
 }
 
-function keepChars(str) {
-    var ret = "";
-    for (var i = 0; i < str.length; ++i) {
-        if (isLetter(str.charCodeAt(i))) {
-            ret += str.charAt(i);
-        }
+function subtractCounter(counter1, counter2) {
+  const newCounter = {};
+  for (const e1 in counter1) {
+    const newCount = counter1[e1] - (counter2[e1] || 0);
+    if (newCount < 0) {
+      const s1 = JSON.stringify(counter1);
+      const s2 = JSON.stringify(counter2);
+      throw new Error(
+        `Invalid new count for ${e1}: ${newCount}. Subtracting: ${s1} - ${s2}`
+      );
     }
-    return ret;
+
+    newCounter[e1] = newCount;
+  }
+
+  return newCounter;
 }
 
-$("#anagram").on("keydown", e => {
-    let anagram = $("#anagram");
-    let material = $("#material");
-    let code = e.keyCode;
-    
-    let ss = anagram[0].selectionStart, se = anagram[0].selectionEnd;
-    
-    if (code != 8 && code != 46) {
-        return;
+function isEmpty(counter) {
+  for (const letter in counter) {
+    if (counter[letter] > 0) {
+      return false;
     }
-    
-    e.preventDefault();
-    
-    let oldval = anagram.val(), deleted;
-    
-    if (ss === se) {
-        if (code === 8) {
-            if (ss === 0) {
-                return;
-            }
-            deleted = oldval[ss-1];
-            anagram.val(oldval.substring(0, ss-1) + oldval.substring(ss));
-            anagram[0].selectionStart = anagram[0].selectionEnd = ss-1;
-        } else { // code == 46
-            if (se == anagram.val().length) {
-                return;
-            }
-            deleted = oldval[ss];
-            anagram.val(oldval.substring(0, ss) + oldval.substring(ss+1));
-            anagram[0].selectionStart = anagram[0].selectionEnd = ss;
-        }
+  }
+
+  return true;
+}
+
+/** `true` if all letters of s2 contained in s1; `false` otherwise */
+function contains(s1, s2) {
+  const counter1 = countLetters(s1);
+  const counter2 = countLetters(s2);
+
+  for (const letter in counter2) {
+    if ((counter1[letter] || 0) < counter2[letter]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+const LETTER_REGEX = /^[a-zA-Z\u00C0-\u017F]$/;
+
+function isLetter(c) {
+  return LETTER_REGEX.test(c);
+}
+
+function isPrintable(c) {
+  return c.length === 1;
+}
+
+function stringSubtract(s1, s2) {
+  let lettersOnlyS1 = "";
+  for (const c of s1) {
+    if (isLetter(c)) {
+      lettersOnlyS1 += c;
+    }
+  }
+
+  for (const char of s2) {
+    const i = lettersOnlyS1.indexOf(char);
+    if (i === -1) {
+      continue;
+    }
+
+    lettersOnlyS1 = lettersOnlyS1.slice(0, i) + lettersOnlyS1.slice(i + 1);
+  }
+
+  return lettersOnlyS1;
+}
+
+// Capitalize all input in original
+function keepCapitalized(id) {
+  document.querySelector(id).addEventListener("input", function (event) {
+    const selectionStart = event.target.selectionStart;
+    const selectionEnd = event.target.selectionEnd;
+    const input = event.target;
+    input.value = input.value.toUpperCase();
+    input.selectionStart = selectionStart;
+    input.selectionEnd = selectionEnd;
+  });
+}
+
+keepCapitalized("#original");
+keepCapitalized("#anagram");
+
+/**
+ * `inputs` should be an array of html textarea/input elements from which the removal of character `c`
+ * should be attempted. First tries from the first member of `inputs` etc, then second, etc.
+ * Stops trying on successful removal.
+ */
+function removeFrom(inputs, c) {
+  if (c.length === 0) {
+    return;
+  }
+
+  for (const input of inputs) {
+    const removableIndex = input.value.indexOf(c);
+    if (removableIndex !== -1) {
+      const newVal =
+        input.value.slice(0, removableIndex) +
+        input.value.slice(removableIndex + 1);
+      input.value = newVal;
+      break;
+    }
+  }
+}
+
+function receiveIfLetter(input, c) {
+  if (isLetter(c)) {
+    input.value += c;
+  }
+}
+
+/**
+ * Get removable chars from `s` starting at position `pos`,
+ * depending on `command` and `ctrlKey` pressed.
+ */
+function getDeletable(s, pos, command, ctrlKey) {
+  const deletable = [];
+  if (command === "Backspace") {
+    if (ctrlKey) {
+      // find first non-whitespace char
+      let i = pos - 1;
+      for (; /\s/.test(s.charAt(i)); --i);
+
+      for (; i >= 0 && /\S/.test(s.charAt(i)); --i) {
+        deletable.push(s.charAt(i));
+      }
     } else {
-        anagram.val(oldval.substring(0, ss) + oldval.substring(se));
-        deleted = oldval.substring(ss, se);
+      deletable.push(s.charAt(pos - 1));
     }
-    
-    material.val(material.val() + keepChars(deleted));
-});
+  } else if (command === "Delete") {
+    if (ctrlKey) {
+      // find first non-whitespace char
+      let i = pos;
+      for (; /\s/.test(s.charAt(i)); ++i);
 
-$("#anagram").on("keypress", e => {
-    e.preventDefault();
-    let anagram = $("#anagram");
-    let material = $("#material");
-    let code = e.keyCode;
-
-    code = String.fromCharCode(code).toUpperCase().charCodeAt(0);
-    let pressed = String.fromCharCode(code);
-    
-    const oldMaterial = material.val();
-
-    if (isLetter(code) && pressed === pressed.toUpperCase()) {                    
-        if (oldMaterial.indexOf(pressed) == -1) {
-            return;
-        }
-        material.val(oldMaterial.replace(pressed, ""));
+      for (; i < s.length && /\S/.test(s.charAt(i)); ++i) {
+        deletable.push(s.charAt(i));
+      }
+    } else {
+      deletable.push(s.charAt(pos));
     }
-    
-    let oldval = anagram.val();
-    let newval = oldval.substring(0, anagram[0].selectionStart) + pressed + oldval.substring(anagram[0].selectionEnd);
-    let se = anagram[0].selectionEnd;
-    anagram.val(newval);
-    anagram[0].selectionStart = anagram[0].selectionEnd = se+1;
-});
+  }
 
-function replaceSelected(element, replacementText) {
-    let oldval = element.val();
-    let newval = oldval.substring(0, element[0].selectionStart) + replacementText + oldval.substring(element[0].selectionEnd);
-    let newStartSelection = element[0].selectionEnd + replacementText.length;
-    element.val(newval);
-    element[0].selectionStart = newStartSelection;
-    element[0].selectionEnd = newStartSelection;
+  return deletable;
 }
 
-$("#material").on("keypress", event => {
-    event.preventDefault();
-    let pressed = String.fromCharCode(event.keyCode).toUpperCase();
-    replaceSelected($("#material"), pressed);
+function removesContent(key) {
+  return key === "Backspace" || key === "Delete";
+}
+
+document.querySelector("#original").addEventListener("cut", function (event) {
+  const input = event.target;
+
+  const selectionStart = input.selectionStart;
+  const selectionEnd = input.selectionEnd;
+
+  const material = document.querySelector("#material");
+  const anagram = document.querySelector("#anagram");
+  const targetInputs = [material, anagram];
+
+  for (let i = selectionStart; i < selectionEnd; i++) {
+    removeFrom(targetInputs, input.value.charAt(i));
+  }
 });
 
-$("#material").on("paste", event => {
-    event.preventDefault();
-    const clipboardData = event.clipboardData || window.clipboardData || event.originalEvent.clipboardData;
-    const pastedContent = clipboardData.getData("text").toUpperCase();
-    replaceSelected($("#material"), pastedContent);
-});
+document.querySelector("#original").addEventListener("paste", function (event) {
+  const input = event.target;
 
-$("#anagram").on("paste", event => {
-    event.preventDefault();
-    alert("Pasting in the anagram input field not yet supported");
-});
+  const selectionStart = input.selectionStart;
+  const selectionEnd = input.selectionEnd;
 
-$("#shuffle").on("click", e => {
-    var arr = $("#material").val().split("");
-    var curr = arr.length, tmp, randIndex;
-    
-    while (0 !== curr) {
-        rand = Math.floor(Math.random()*curr);
-        --curr;
-        
-        tmp = arr[curr];
-        arr[curr] = arr[rand];
-        arr[rand] = tmp;
+  const material = document.querySelector("#material");
+  const anagram = document.querySelector("#anagram");
+  const targetInputs = [material, anagram];
+
+  for (let i = selectionStart; i < selectionEnd; i++) {
+    removeFrom(targetInputs, input.value.charAt(i));
+  }
+
+  for (const char of event.clipboardData.getData("text")) {
+    if (isLetter(char)) {
+      material.value += char.toUpperCase();
     }
-    
-    $("#material").val(arr.join(""));
+  }
 });
 
-window.onload = function() {
-    $("#material").focus();
-};
+document
+  .querySelector("#original")
+  .addEventListener("keydown", function (event) {
+    const input = event.target;
+
+    const selectionStart = input.selectionStart;
+    const selectionEnd = input.selectionEnd;
+
+    const material = document.querySelector("#material");
+    const anagram = document.querySelector("#anagram");
+    const targetInputs = [material, anagram];
+
+    if (selectionStart === selectionEnd) {
+      const deletable = getDeletable(
+        input.value,
+        selectionStart,
+        event.key,
+        event.ctrlKey
+      );
+
+      if (deletable.length) {
+        for (const letter of deletable) {
+          removeFrom(targetInputs, letter);
+        }
+        return;
+      } else if (!isLetter(event.key)) {
+        return;
+      }
+    }
+
+    if (
+      removesContent(event.key) ||
+      (isPrintable(event.key) && !event.ctrlKey)
+    ) {
+      for (let i = selectionStart; i < selectionEnd; i++) {
+        removeFrom(targetInputs, input.value.charAt(i));
+      }
+    } else {
+      return;
+    }
+
+    if (isLetter(event.key) && !event.ctrlKey) {
+      material.value += event.key.toUpperCase();
+    }
+  });
+
+document.querySelector("#anagram").addEventListener("cut", function (event) {
+  const input = event.target;
+
+  const selectionStart = input.selectionStart;
+  const selectionEnd = input.selectionEnd;
+
+  const material = document.querySelector("#material");
+
+  for (let i = selectionStart; i < selectionEnd; i++) {
+    receiveIfLetter(material, input.value.charAt(i));
+  }
+});
+
+document.querySelector("#anagram").addEventListener("paste", function (event) {
+  handlePaste(event);
+});
+
+function handlePaste(event) {
+  event.preventDefault();
+  alert("Pasting in the anagram field not yet supported!");
+  return;
+
+  const input = document.querySelector(intoSelector);
+
+  const selectionStart = input.selectionStart;
+  const selectionEnd = input.selectionEnd;
+
+  const deleted = input.value.slice(selectionStart, selectionEnd);
+
+  // if (pasted - deleted) all in material: ok
+  const diffLetters = stringSubtract(pasted, deleted);
+  const material = document.querySelector(fromSelector);
+
+  if (contains(material.value + pasted, deleted)) {
+    for (const pastedLetter of pasted) {
+      removeFrom([material], pastedLetter);
+    }
+
+    for (const deletedLetter of deleted) {
+      receiveIfLetter(material, deletedLetter);
+    }
+
+    input.value =
+      input.value.slice(0, selectionStart) +
+      pasted +
+      input.value.slice(selectionEnd);
+  }
+}
+
+document
+  .querySelector("#anagram")
+  .addEventListener("keydown", function (event) {
+    const input = event.target;
+
+    const selectionStart = input.selectionStart;
+    const selectionEnd = input.selectionEnd;
+
+    const material = document.querySelector("#material");
+
+    if (selectionStart === selectionEnd) {
+      const deletable = getDeletable(
+        input.value,
+        selectionStart,
+        event.key,
+        event.ctrlKey
+      );
+
+      if (deletable.length) {
+        for (const letter of deletable) {
+          receiveIfLetter(material, letter);
+        }
+        return;
+      } else if (!isLetter(event.key)) {
+        return;
+      }
+    }
+
+    if (event.ctrlKey) {
+      if (removesContent(event.key)) {
+        for (let i = selectionStart; i < selectionEnd; i++) {
+          receiveIfLetter(material, input.value.charAt(i));
+        }
+      } else if (event.key.toUpperCase() === "V") {
+        handlePaste(event);
+      }
+
+      return;
+    }
+
+    if (removesContent(event.key)) {
+      for (let i = selectionStart; i < selectionEnd; i++) {
+        receiveIfLetter(material, input.value.charAt(i));
+      }
+      return;
+    } else if (!isPrintable(event.key)) {
+      return;
+    }
+
+    const insertable = event.key.toUpperCase();
+    if (isLetter(insertable) && material.value.indexOf(insertable) === -1) {
+      event.preventDefault();
+      return;
+    }
+
+    for (let i = selectionStart; i < selectionEnd; i++) {
+      receiveIfLetter(material, input.value.charAt(i));
+    }
+
+    // insert from material into anagram if char available
+    if (material.value.indexOf(insertable) === -1 || !isLetter(event.key)) {
+      // prevent insertion in the anagram field
+      event.preventDefault();
+      return;
+    }
+
+    // the default action will insert this in the anagram field
+    if (isLetter(event.key) && !event.ctrlKey) {
+      removeFrom([material], insertable);
+    }
+  });
+
+document.querySelector("#shuffle").addEventListener("click", () => {
+  const material = document.querySelector("#material");
+  const letters = material.value.split("");
+
+  for (let i = 0; i < letters.length; i++) {
+    const randIndex = Math.floor(Math.random() * i);
+
+    const tmp = letters[i];
+    letters[i] = letters[randIndex];
+    letters[randIndex] = tmp;
+  }
+
+  material.value = letters.join("");
+});

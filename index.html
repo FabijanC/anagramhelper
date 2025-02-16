@@ -1,30 +1,26 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <title>Anagram Helper</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" type="text/css" href="index.css" />
     <link
       href="https://fonts.googleapis.com/css?family=Roboto|Roboto+Mono&display=swap"
       rel="stylesheet"
     />
+    <link rel="icon" type="image/x-icon" href="images/favicon.png" />
   </head>
   <body>
     <div class="mainframe">
-      <!-- <p class="input-label">Original</p>
-      <textarea id="original" type="text"></textarea> -->
+      <p class="input-label">Original</p>
+      <textarea id="original" type="text" autofocus></textarea>
 
-      <p class="input-label">Material</p>
-      <button id="shuffle">Shuffle</button>
-      <textarea id="material" type="text"></textarea>
+      <p class="input-label">Material <button id="shuffle">⟳</button></p>
+      <textarea id="material" type="text" readonly></textarea>
 
       <p class="input-label">Anagram</p>
       <textarea id="anagram" type="text"></textarea>
     </div>
-    <script
-      src="https://code.jquery.com/jquery-3.3.1.min.js"
-      integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
-      crossorigin="anonymous"
-    ></script>
     <script src="index.js"></script>
   </body>
 </html>
