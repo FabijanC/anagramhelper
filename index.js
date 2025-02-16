@@ -53,8 +53,10 @@ function contains(s1, s2) {
   return true;
 }
 
+const LETTER_REGEX = /^[a-zA-Z\u00C0-\u017F]$/;
+
 function isLetter(c) {
-  return c.length === 1 && c.toUpperCase() != c.toLowerCase();
+  return LETTER_REGEX.test(c);
 }
 
 function isPrintable(c) {
@@ -159,6 +161,10 @@ function getDeletable(s, pos, command, ctrlKey) {
   return deletable;
 }
 
+function removesContent(key) {
+  return key === "Backspace" || key === "Delete";
+}
+
 document.querySelector("#original").addEventListener("cut", function (event) {
   const input = event.target;
 
@@ -226,8 +232,7 @@ document
     }
 
     if (
-      event.key === "Backspace" ||
-      event.key === "Delete" ||
+      removesContent(event.key) ||
       (isPrintable(event.key) && !event.ctrlKey)
     ) {
       for (let i = selectionStart; i < selectionEnd; i++) {
@@ -256,27 +261,40 @@ document.querySelector("#anagram").addEventListener("cut", function (event) {
 });
 
 document.querySelector("#anagram").addEventListener("paste", function (event) {
-  const input = event.target;
+  handlePaste(event);
+});
+
+function handlePaste(event) {
+  event.preventDefault();
+  alert("Pasting in the anagram field not yet supported!");
+  return;
+
+  const input = document.querySelector(intoSelector);
 
   const selectionStart = input.selectionStart;
   const selectionEnd = input.selectionEnd;
 
   const deleted = input.value.slice(selectionStart, selectionEnd);
-  const pasted = event.clipboardData.getData("text");
 
   // if (pasted - deleted) all in material: ok
   const diffLetters = stringSubtract(pasted, deleted);
-  const material = document.querySelector("#material");
+  const material = document.querySelector(fromSelector);
 
-  if (contains(material.value, diffLetters)) {
-    for (const diffLetter of diffLetters) {
-      removeFrom([material], diffLetter);
+  if (contains(material.value + pasted, deleted)) {
+    for (const pastedLetter of pasted) {
+      removeFrom([material], pastedLetter);
     }
-    // inserted by default
-  } else {
-    event.preventDefault();
+
+    for (const deletedLetter of deleted) {
+      receiveIfLetter(material, deletedLetter);
+    }
+
+    input.value =
+      input.value.slice(0, selectionStart) +
+      pasted +
+      input.value.slice(selectionEnd);
   }
-});
+}
 
 document
   .querySelector("#anagram")
@@ -307,29 +325,28 @@ document
     }
 
     if (event.ctrlKey) {
-      if (event.key === "Backspace" || event.key === "Delete") {
+      if (removesContent(event.key)) {
         for (let i = selectionStart; i < selectionEnd; i++) {
           receiveIfLetter(material, input.value.charAt(i));
         }
+      } else if (event.key.toUpperCase() === "V") {
+        handlePaste(event);
       }
+
       return;
     }
 
-    // TODO pasting not working in anagram if: original = "ABC ABC", material = "", anagram = "ABC ABC" and pasting "ABC ABC" over "C ABC"
-
-    const insertable = event.key.toUpperCase();
-
-    if (event.key === "Backspace" || event.key === "Delete") {
+    if (removesContent(event.key)) {
       for (let i = selectionStart; i < selectionEnd; i++) {
         receiveIfLetter(material, input.value.charAt(i));
       }
       return;
     } else if (!isPrintable(event.key)) {
       return;
-    } else if (
-      isLetter(insertable) &&
-      material.value.indexOf(insertable) === -1
-    ) {
+    }
+
+    const insertable = event.key.toUpperCase();
+    if (isLetter(insertable) && material.value.indexOf(insertable) === -1) {
       event.preventDefault();
       return;
     }
